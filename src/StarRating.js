@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { ReactPropTypes } from "react";
 import PropTypes from "prop-types"
 
 const containerStyle = {

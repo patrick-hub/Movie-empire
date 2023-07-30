@@ -1,20 +1,18 @@
-import { useEffect, useState } from "react";
-import MovieDetails from "./MovieDetails";
+import {useRef, useState } from "react";
+import { useMovies } from "./useMovies";
+import { useLocalStorageState } from "./useLocalStorageState";
+import { useKey } from "./useKey";
 import Loader from "./Loader";
-import StarRating from "./StarRating";
+import MovieDetails from "./MovieDetails";
 
 const average = (arr) =>
 	arr.reduce((acc, cur, i, arr) => acc + cur / arr.length, 0);
 
-const KEY = "85395cbb";
-
 export default function App() {
 	const [query, setQuery] = useState("");
-	const [movies, setMovies] = useState([]);
-	const [watched, setWatched] = useState([]);
-	const [loading, setLoading] = useState(false);
-	const [error, setError] = useState("");
 	const [selectedId, setSelectedId] = useState(null);
+	const { movies, isLoading, error } = useMovies(query);
+	const [watched, setWatched] = useLocalStorageState([], "watched");
 
 	function handleSelectedMovie(id) {
 		setSelectedId(id);
@@ -32,48 +30,6 @@ export default function App() {
 		setWatched((watched) => watched.filter((movie) => movie.imdbID !== id));
 	}
 
-	useEffect(
-		function () {
-			const controller = new AbortController();
-			async function fetchMovies() {
-				try {
-					setLoading(true);
-					setError("");
-					const res = await fetch(
-						`http://www.omdbapi.com/?apikey=${KEY}&s=${query}
-            `,
-						{ signal: controller.signal }
-					);
-
-					if (!res.ok)
-						throw new Error("Something Went Wrong with fetching movies");
-
-					const data = await res.json();
-					if (data.Response === "False") throw new Error("Movie not found");
-					setMovies(data.Search);
-					setError("");
-				} catch (err) {
-					if (err.name !== "AbortError") {
-						setError(err.message);
-					}
-				} finally {
-					setLoading(false);
-				}
-			}
-			if (!query.length) {
-				setMovies([]);
-				setError("");
-				return;
-			}
-            handleCloseMovie()
-			fetchMovies();
-			return function () {
-				controller.abort();
-			};
-		},
-		[query]
-	);
-
 	return (
 		<>
 			<Navbar>
@@ -82,8 +38,8 @@ export default function App() {
 			</Navbar>
 			<Main>
 				<Box>
-					{loading && <Loader />}
-					{!loading && !error && (
+					{isLoading && <Loader />}
+					{!isLoading && !error && (
 						<MovieList movies={movies} onhandleMovie={handleSelectedMovie} />
 					)}
 					{error && <ErrorMessage message={error} />}
@@ -112,8 +68,6 @@ export default function App() {
 	);
 }
 
-
-
 function ErrorMessage({ message }) {
 	return (
 		<div className="error">
@@ -134,12 +88,20 @@ function Navbar({ children }) {
 function Logo() {
 	return (
 		<div className="logo">
-			<span role="img">🍿</span>
+			<span role="img">🍿📽️ </span>
 			<h1>Movie Empire</h1>
 		</div>
 	);
 }
+
 function Search({ query, setQuery }) {
+	const inputEl = useRef(null);
+	useKey("Enter", function () {
+		if (document.activeElement === inputEl.current) return;
+		inputEl.current.focus();
+		setQuery("");
+	});
+
 	return (
 		<input
 			className="search"
@@ -147,6 +109,7 @@ function Search({ query, setQuery }) {
 			placeholder="Search movies..."
 			value={query}
 			onChange={(e) => setQuery(e.target.value)}
+			ref={inputEl}
 		/>
 	);
 }
@@ -176,7 +139,6 @@ function Box({ children }) {
 	);
 }
 
-
 function MovieList({ movies, onhandleMovie }) {
 	return (
 		<ul className="list list-movies">
@@ -201,8 +163,6 @@ function Movie({ movie, onhandleMovie }) {
 		</li>
 	);
 }
-
-
 
 function WatchedSummary({ watched }) {
 	const avgImdbRating = average(watched.map((movie) => movie.imdbRating));
