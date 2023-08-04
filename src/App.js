@@ -14,11 +14,11 @@ export default function App() {
 	const { movies, isLoading, error } = useMovies(query);
 	const [watched, setWatched] = useLocalStorageState([], "watched");
 
-	function handleSelectedMovie(id) {
-		setSelectedId(id);
+	function handleSelectMovie(id) {
+		setSelectedId((selectedId) => (id === selectedId ? null : id));
 	}
 
-	function handleCloseMovie(id) {
+	function handleCloseMovie() {
 		setSelectedId(null);
 	}
 
@@ -40,10 +40,10 @@ export default function App() {
 				<Box>
 					{isLoading && <Loader />}
 					{!isLoading && !error && (
-						<MovieList movies={movies} onhandleMovie={handleSelectedMovie} />
+						<MovieList movies={movies} onhandleMovie={handleSelectMovie} />
 					)}
 					{error && <ErrorMessage message={error} />}
-					{!query && <p>Search for Movie</p>}
+					{!query && <div  className="movie--search"> <p>Search for Movie</p> </div>}
 				</Box>
 				<Box>
 					{selectedId ? (
